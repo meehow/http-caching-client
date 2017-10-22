@@ -2,7 +2,6 @@ package httpcaching
 
 import (
 	"bytes"
-	"crypto/rsa"
 	"crypto/sha1"
 	"encoding/gob"
 	"encoding/hex"
@@ -41,7 +40,6 @@ func (rc *ReadCloser) MarshalBinary() ([]byte, error) {
 
 func init() {
 	gob.Register(ReadCloser{})
-	gob.Register(rsa.PublicKey{})
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
@@ -59,7 +57,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 	resp, err := c.Client.Do(req)
-	if err != nil || resp.StatusCode >= 500 {
+	if err != nil || resp.StatusCode >= 300 {
 		return resp, err
 	}
 	if _, err := os.Stat(dir); err != nil {
@@ -72,6 +70,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return resp, err
 	}
+	resp.TLS = nil
 	resp.Body = &ReadCloser{body: resp.Body}
 	if err := gob.NewEncoder(file).Encode(resp); err != nil {
 		return resp, err
