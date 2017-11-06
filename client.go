@@ -15,6 +15,7 @@ import (
 type Client struct {
 	http.Client
 	CacheDir string
+	Flush    bool
 }
 
 type ReadCloser struct {
@@ -50,11 +51,13 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	hash := hex.EncodeToString(sum[:])
 	dir := path.Join(c.CacheDir, hash[:2])
 	filename := path.Join(dir, hash)
-	if file, err := os.Open(filename); err == nil {
-		resp := new(http.Response)
-		err := gob.NewDecoder(file).Decode(resp)
-		file.Close()
-		return resp, err
+	if !c.Flush {
+		if file, err := os.Open(filename); err == nil {
+			resp := new(http.Response)
+			err := gob.NewDecoder(file).Decode(resp)
+			file.Close()
+			return resp, err
+		}
 	}
 	resp, err := c.Client.Do(req)
 	if err != nil || resp.StatusCode >= 300 {
